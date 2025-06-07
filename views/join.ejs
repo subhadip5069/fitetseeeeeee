@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join Meeting - Fitetse Meet</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body>
+  <div class="home-container">
+    <div class="card">
+      <h1>Join a Meeting</h1>
+      <p>Enter your email and meeting code to join</p>
+      <% if (error) { %>
+        <div class="error"><%= error %></div>
+      <% } %>
+      <form class="join-form" action="/join" method="POST">
+        <div class="form-group">
+          <i class="fas fa-envelope validation-icon"></i>
+          <input type="email" name="email" placeholder="Enter your email" required>
+        </div>
+        <div class="form-group">
+          <i class="fas fa-key validation-icon"></i>
+          <input type="text" name="code" placeholder="Enter 6-digit code" pattern="[0-9]{6}" required>
+        </div>
+        <button type="submit" class="btn">Join Meeting</button>
+      </form>
+      <div class="home-buttons">
+        <a href="/" class="btn">Back to Home</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

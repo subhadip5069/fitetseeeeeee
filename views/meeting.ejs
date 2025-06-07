@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fabido Meet</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+  <div class="meeting-container">
+    <div class="main-content">
+      <div id="big-screen">
+        <div id="big-screen-grid"></div>
+      </div>
+      <div class="controls">
+        <button id="video-btn" title="Turn off camera"><i class="fas fa-video"></i></button>
+        <button id="audio-btn" title="Mute microphone"><i class="fas fa-microphone"></i></button>
+        <button id="hangup-btn" title="Leave meeting" onclick="hangup()"><i class="fas fa-phone-slash"></i></button>
+        <button id="more-btn" title="More options" onclick="toggleMoreMenu()"><i class="fas fa-ellipsis-v"></i></button>
+        <div id="more-menu">
+          <a href="#" id="share-screen-btn" onclick="shareScreen()"><i class="fas fa-desktop"></i> Share Screen</a>
+          <a href="#" onclick="rotateCamera()"><i class="fas fa-sync"></i> Rotate Camera</a>
+          <a href="#" id="reaction-menu" onclick="toggleReactionPicker()"><i class="fas fa-smile"></i> Reactions</a>
+        </div>
+        <div id="reaction-picker">
+          <span class="reaction-emoji" onclick="sendReaction('👍')">👍</span>
+          <span class="reaction-emoji" onclick="sendReaction('👏')">👏</span>
+          <span class="reaction-emoji" onclick="sendReaction('❤️')">❤️</span>
+          <span class="reaction-emoji" onclick="sendReaction('😄')">😄</span>
+          <span class="reaction-emoji" onclick="sendReaction('🎉')">🎉</span>
+          <span class="reaction-emoji" onclick="sendReaction('😢')">😢</span>
+          <span class="reaction-emoji" onclick="sendReaction('😡')">😡</span>
+          <span class="reaction-emoji" onclick="sendReaction('🤔')">🤔</span>
+          <span class="reaction-emoji" onclick="sendReaction('🙌')">🙌</span>
+        </div>
+      </div>
+    </div>
+    <div id="participant-sidebar">
+      <div id="local-video-container">
+        <video id="video-local" autoplay muted playsinline></video>
+        <p id="local-label"></p>
+      </div>
+      <div id="participant-list"></div>
+    </div>
+    <button class="chat-toggle-btn" onclick="toggleChat()"><i class="fas fa-comment"></i><span id="chat-badge">0</span></button>
+    <div id="chat-panel">
+      <div id="chat-container"></div>
+      <input id="chat-input" type="text" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage()">
+    </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/client.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const email = urlParams.get('email');
+    const code = urlParams.get('code');
+    startMeeting(code, email);
+  </script>
+</body>
+</html>

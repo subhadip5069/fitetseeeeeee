@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fitetse Meet</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+<body>
+  <div class="home-container">
+    <div class="card">
+      <h1>Fitetse Meet</h1>
+      <p>Start or join a video meeting</p>
+      <div class="home-buttons">
+        <a href="/join" class="btn">Join Meeting</a>
+        <button class="btn" onclick="generateMeetingCode()">New Meeting</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    function generateMeetingCode() {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const email = prompt('Enter your email:');
+      if (email && email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        window.location.href = `/join/${encodeURIComponent(email)}/${code}`;
+      } else {
+        alert('Please enter a valid email address.');
+      }
+    }
+  </script>
+</body>
+</html>
