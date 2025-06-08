@@ -14,11 +14,9 @@ async function startMeeting(roomId, email) {
   console.log(`Starting meeting for ${email} in room ${roomId}`);
   socket.emit('join-room', { roomId, email });
 
-  // Clean up existing connections and streams
   cleanupMeeting();
 
   try {
-    // Fetch Xirsys ICE servers
     const response = await fetch('/get-ice-servers');
     const { iceServers } = await response.json();
     console.log('Fetched ICE servers:', iceServers);
@@ -60,7 +58,7 @@ async function startMeeting(roomId, email) {
 
     socket.on('reload-meeting', ({ roomId: newRoomId }) => {
       console.log(`Received reload-meeting for room ${newRoomId}`);
-      startMeeting(newRoomId, email); // Restart meeting
+      startMeeting(newRoomId, email);
     });
 
     socket.on('offer', async ({ sdp, callerId, callerEmail }) => {
@@ -176,17 +174,14 @@ async function startMeeting(roomId, email) {
 }
 
 function cleanupMeeting() {
-  // Close all peer connections
   Object.values(peerConnections).forEach(({ peerConnection }) => {
     peerConnection.close();
   });
   peerConnections = {};
-  // Stop local stream tracks
   localStream?.getTracks().forEach(track => track.stop());
   localStream = null;
   mainStream = null;
   mainStreamId = 'local';
-  // Clear participant UI
   const participants = document.getElementById('participants');
   participants.innerHTML = '';
   console.log('Cleaned up meeting resources');
