@@ -41,17 +41,19 @@ body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  flex-direction: row;
 }
 
 .participants {
   width: 200px;
   background-color: var(--panel-color);
   overflow-y: auto;
-  border-right: 1px solid var(--secondary-color);
+  border-left: 1px solid var(--secondary-color);
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 10px;
+  order: 2;
 }
 
 .video-container {
@@ -111,6 +113,7 @@ body {
   align-items: center;
   background-color: var(--secondary-color);
   position: relative;
+  order: 1;
 }
 
 .main-video video {
@@ -123,7 +126,7 @@ body {
 }
 
 .controls {
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
@@ -133,6 +136,7 @@ body {
   display: none;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
   gap: 5px;
+  z-index: 100;
 }
 
 .controls.active {
@@ -159,7 +163,7 @@ body {
 }
 
 .controls-toggle {
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   right: 20px;
   background: var(--primary-color);
@@ -169,6 +173,7 @@ body {
   border-radius: 50%;
   cursor: pointer;
   font-size: 18px;
+  z-index: 100;
 }
 
 .controls-toggle:hover {
@@ -176,7 +181,7 @@ body {
 }
 
 .chat-panel {
-  position: absolute;
+  position: fixed;
   right: 0;
   top: 0;
   bottom: 0;
@@ -187,6 +192,7 @@ body {
   padding: 10px;
   display: flex;
   flex-direction: column;
+  z-index: 90;
 }
 
 .chat-panel.active {
@@ -318,18 +324,60 @@ body {
   100% { opacity: 0; }
 }
 
+/* Mobile Layout (Google Meet-like) */
 @media (max-width: 768px) {
+  .main-container {
+    flex-direction: column;
+    position: relative;
+  }
+
   .participants {
-    width: 120px;
+    width: 100%;
+    height: 100px;
+    flex-direction: row;
+    overflow-x: auto;
+    border-left: none;
+    border-bottom: 1px solid var(--secondary-color);
     padding: 5px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 80;
+    background-color: var(--panel-color);
+    order: 0;
+    display: none; /* Hidden by default, toggled via button */
+  }
+
+  .participants.active {
+    display: flex;
   }
 
   .video-container {
-    aspect-ratio: 4 / 3;
+    width: 120px;
+    height: 90px;
+    flex-shrink: 0;
+  }
+
+  .video-container .initials {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+
+  .video-container p {
+    font-size: 12px;
+  }
+
+  .main-video {
+    flex: 1;
+    order: 1;
+    padding-top: 10px;
+    padding-bottom: 60px; /* Space for controls */
   }
 
   .chat-panel {
     width: 100%;
+    z-index: 90;
   }
 
   .controls {
@@ -346,34 +394,49 @@ body {
     bottom: 10px;
     right: 10px;
   }
+
+  .participants-toggle {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: var(--primary-color);
+    color: var(--text-color);
+    border: none;
+    padding: 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    z-index: 100;
+    display: block;
+  }
+
+  .participants-toggle:hover {
+    background: var(--accent-color);
+  }
 }
 
 @media (max-width: 480px) {
   .participants {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 80px;
-    z-index: 10;
-    padding: 5px;
+    height: 80px;
   }
 
-  .main-video {
-    padding-top: 80px;
+  .video-container {
+    width: 100px;
+    height: 75px;
   }
 
-  .video-container p {
-    font-size: 12px;
-  }
-
-  .video-container .initials {
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
+  .main-video video {
+    max-height: calc(100vh - 100px);
   }
 
   .controls {
     flex-wrap: wrap;
     justify-content: center;
+    gap: 3px;
+  }
+
+  .controls button {
+    padding: 8px;
+    font-size: 14px;
   }
 }
