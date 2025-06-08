@@ -10,29 +10,29 @@
 <body>
   <div class="watermark">Fitetse-Meet</div>
   <div class="main-container">
-    <div class="participants" id="participants"></div>
     <div class="main-video">
       <video id="local-video" autoplay playsinline muted></video>
     </div>
-    <div class="chat-panel" id="chat-panel">
-      <div class="chat-badge" id="chat-badge">0</div>
-      <div class="chat-container" id="chat-container"></div>
-      <div class="chat-input">
-        <select id="chat-target">
-          <option value="group">Group</option>
-        </select>
-        <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage()">
-        <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
-      </div>
-      <div class="emoji-buttons">
-        <button onclick="sendEmoji('😊')" title="Send smile">😊</button>
-        <button onclick="sendEmoji('👍')" title="Send thumbs up">👍</button>
-        <button onclick="sendEmoji('🎉')" title="Send celebration">🎉</button>
-      </div>
-    </div>
+    <div class="participants" id="participants"></div>
   </div>
   <div class="emoji-container" id="emoji-container"></div>
   <div class="notifications" id="notifications"></div>
+  <div class="chat-panel" id="chat-panel">
+    <div class="chat-badge" id="chat-badge">0</div>
+    <div class="chat-container" id="chat-container"></div>
+    <div class="chat-input">
+      <select id="chat-target">
+        <option value="group">Group</option>
+      </select>
+      <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage()">
+      <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+    <div class="emoji-buttons">
+      <button onclick="sendEmoji('😊')" title="Send smile">😊</button>
+      <button onclick="sendEmoji('👍')" title="Send thumbs up">👍</button>
+      <button onclick="sendEmoji('🎉')" title="Send celebration">🎉</button>
+    </div>
+  </div>
   <div class="controls" id="controls">
     <button id="audio-btn" onclick="toggleAudio()" title="Toggle Audio"><i class="fas fa-microphone"></i></button>
     <button id="video-btn" onclick="toggleVideo()" title="Toggle Video"><i class="fas fa-video"></i></button>
@@ -45,6 +45,7 @@
     <button onclick="hangup()" style="background: #e74c3c;" title="Hang Up"><i class="fas fa-phone-slash"></i></button>
   </div>
   <button class="controls-toggle" onclick="toggleControls()" title="Show/Hide Controls"><i class="fas fa-ellipsis-h"></i></button>
+  <button class="participants-toggle" onclick="toggleParticipants()" title="Show/Hide Participants"><i class="fas fa-users"></i></button>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js"></script>
   <script src="/js/client.js"></script>
   <script>
