@@ -3,59 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fabido Meet</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <title>Fitetse-Meet</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="meeting-container">
-    <div class="main-content">
-      <div id="big-screen">
-        <div id="big-screen-grid"></div>
-      </div>
-      <div class="controls">
-        <button id="video-btn" title="Turn off camera"><i class="fas fa-video"></i></button>
-        <button id="audio-btn" title="Mute microphone"><i class="fas fa-microphone"></i></button>
-        <button id="hangup-btn" title="Leave meeting" onclick="hangup()"><i class="fas fa-phone-slash"></i></button>
-        <button id="more-btn" title="More options" onclick="toggleMoreMenu()"><i class="fas fa-ellipsis-v"></i></button>
-        <div id="more-menu">
-          <a href="#" id="share-screen-btn" onclick="shareScreen()"><i class="fas fa-desktop"></i> Share Screen</a>
-          <a href="#" onclick="rotateCamera()"><i class="fas fa-sync"></i> Rotate Camera</a>
-          <a href="#" id="reaction-menu" onclick="toggleReactionPicker()"><i class="fas fa-smile"></i> Reactions</a>
-        </div>
-        <div id="reaction-picker">
-          <span class="reaction-emoji" onclick="sendReaction('👍')">👍</span>
-          <span class="reaction-emoji" onclick="sendReaction('👏')">👏</span>
-          <span class="reaction-emoji" onclick="sendReaction('❤️')">❤️</span>
-          <span class="reaction-emoji" onclick="sendReaction('😄')">😄</span>
-          <span class="reaction-emoji" onclick="sendReaction('🎉')">🎉</span>
-          <span class="reaction-emoji" onclick="sendReaction('😢')">😢</span>
-          <span class="reaction-emoji" onclick="sendReaction('😡')">😡</span>
-          <span class="reaction-emoji" onclick="sendReaction('🤔')">🤔</span>
-          <span class="reaction-emoji" onclick="sendReaction('🙌')">🙌</span>
-        </div>
-      </div>
+  <div class="watermark">Fitetse-Meet</div>
+  <div class="main-container">
+    <div class="participants" id="participants"></div>
+    <div class="main-video">
+      <video id="local-video" autoplay playsinline muted></video>
     </div>
-    <div id="participant-sidebar">
-      <div id="local-video-container">
-        <video id="video-local" autoplay muted playsinline></video>
-        <p id="local-label"></p>
+    <div class="chat-panel" id="chat-panel">
+      <div class="chat-badge" id="chat-badge">0</div>
+      <div class="chat-container" id="chat-container"></div>
+      <div class="chat-input">
+        <select id="chat-target">
+          <option value="group">Group</option>
+        </select>
+        <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage()">
+        <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
       </div>
-      <div id="participant-list"></div>
-    </div>
-    <button class="chat-toggle-btn" onclick="toggleChat()"><i class="fas fa-comment"></i><span id="chat-badge">0</span></button>
-    <div id="chat-panel">
-      <div id="chat-container"></div>
-      <input id="chat-input" type="text" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage()">
+      <div class="emoji-buttons">
+        <button onclick="sendEmoji('😊')" title="Send smile">😊</button>
+        <button onclick="sendEmoji('👍')" title="Send thumbs up">👍</button>
+        <button onclick="sendEmoji('🎉')" title="Send celebration">🎉</button>
+      </div>
     </div>
   </div>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/client.js"></script>
+  <div class="emoji-container" id="emoji-container"></div>
+  <div class="notifications" id="notifications"></div>
+  <div class="controls" id="controls">
+    <button id="audio-btn" onclick="toggleAudio()" title="Toggle Audio"><i class="fas fa-microphone"></i></button>
+    <button id="video-btn" onclick="toggleVideo()" title="Toggle Video"><i class="fas fa-video"></i></button>
+    <button onclick="rotateCamera()" title="Rotate Camera"><i class="fas fa-camera-rotate"></i></button>
+    <button onclick="shareScreen()" title="Share Screen"><i class="fas fa-desktop"></i></button>
+    <button id="record-btn" onclick="toggleRecording()" title="Record Meeting"><i class="fas fa-record-vinyl"></i></button>
+    <button id="hand-btn" onclick="toggleHandRaise()" title="Raise Hand"><i class="fas fa-hand-paper"></i></button>
+    <button onclick="toggleChat()" title="Chat"><i class="fas fa-comment"></i></button>
+    <button onclick="toggleTheme()" title="Toggle Theme"><i class="fas fa-moon"></i></button>
+    <button onclick="hangup()" style="background: #e74c3c;" title="Hang Up"><i class="fas fa-phone-slash"></i></button>
+  </div>
+  <button class="controls-toggle" onclick="toggleControls()" title="Show/Hide Controls"><i class="fas fa-ellipsis-h"></i></button>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js"></script>
+  <script src="/client.js"></script>
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const email = urlParams.get('email');
-    const code = urlParams.get('code');
-    startMeeting(code, email);
+    startMeeting('<%= code %>', '<%= email %>');
   </script>
 </body>
 </html>
