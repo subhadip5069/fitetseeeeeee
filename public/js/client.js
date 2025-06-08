@@ -1,4 +1,4 @@
-const socket = io();
+const socket = io('https://sampledemo.shop');
 let localStream;
 let peerConnections = {};
 let isRecording = false;
@@ -10,159 +10,189 @@ let mainStream = null;
 let mainStreamId = 'local';
 let handRaised = false;
 
-const configuration = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }
-  ]
-};
-
 async function startMeeting(roomId, email) {
   console.log(`Starting meeting for ${email} in room ${roomId}`);
   socket.emit('join-room', { roomId, email });
 
+  // Clean up existing connections and streams
+  cleanupMeeting();
+
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 } },
-      audio: true
-    });
-    mainStream = localStream;
-    const localVideo = document.getElementById('local-video');
-    localVideo.srcObject = localStream;
-    localVideo.muted = true;
-    localVideo.playsInline = true;
-    localVideo.onloadedmetadata = () => {
-      localVideo.play().catch(err => console.error('Local video play error:', err));
-      console.log('Local video loaded and playing');
-    };
-    addParticipant('local', email, localStream);
-  } catch (err) {
-    console.error('Error accessing media devices:', err);
-    alert(`Failed to access camera and microphone: ${err.message}. Please check permissions.`);
-    return;
-  }
+    // Fetch Xirsys ICE servers
+    const response = await fetch('/get-ice-servers');
+    const { iceServers } = await response.json();
+    console.log('Fetched ICE servers:', iceServers);
 
-  socket.on('existing-participants', (participants) => {
-    console.log('Existing participants:', participants);
-    participants.forEach(({ id, email }) => {
-      createPeerConnection(id, email, roomId, true);
-    });
-  });
+    const configuration = { iceServers };
 
-  socket.on('user-connected', ({ id, email }) => {
-    console.log(`User connected: ${email} (${id})`);
-    createPeerConnection(id, email, roomId, false);
-  });
-
-  socket.on('offer', async ({ sdp, callerId, callerEmail }) => {
-    console.log(`Received offer from ${callerId} (${callerEmail})`);
-    await createPeerConnection(callerId, callerEmail, roomId, false);
-    const peerConnection = peerConnections[callerId].peerConnection;
     try {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      socket.emit('answer', { sdp: answer, target: callerId, sender: socket.id });
-      console.log(`Sent answer to ${callerId}`);
+      localStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 15 } },
+        audio: true
+      });
+      mainStream = localStream;
+      const localVideo = document.getElementById('local-video');
+      localVideo.srcObject = localStream;
+      localVideo.muted = true;
+      localVideo.playsInline = true;
+      localVideo.onloadedmetadata = () => {
+        localVideo.play().catch(err => console.error('Local video play error:', err));
+        console.log('Local video loaded and playing');
+      };
+      addParticipant('local', email, localStream);
     } catch (err) {
-      console.error(`Error handling offer from ${callerId}:`, err);
+      console.error('Error accessing media devices:', err);
+      alert(`Failed to access camera and microphone: ${err.message}. Please check permissions.`);
+      return;
     }
-  });
 
-  socket.on('answer', async ({ sdp, callerId }) => {
-    console.log(`Received answer from ${callerId}`);
-    const peerConnection = peerConnections[callerId]?.peerConnection;
-    if (peerConnection) {
+    socket.on('existing-participants', (participants) => {
+      console.log('Existing participants:', participants);
+      participants.forEach(({ id, email }) => {
+        createPeerConnection(id, email, roomId, configuration, true);
+      });
+    });
+
+    socket.on('user-connected', ({ id, email }) => {
+      console.log(`User connected: ${email} (${id})`);
+      createPeerConnection(id, email, roomId, configuration, false);
+    });
+
+    socket.on('reload-meeting', ({ roomId: newRoomId }) => {
+      console.log(`Received reload-meeting for room ${newRoomId}`);
+      startMeeting(newRoomId, email); // Restart meeting
+    });
+
+    socket.on('offer', async ({ sdp, callerId, callerEmail }) => {
+      console.log(`Received offer from ${callerId} (${callerEmail})`);
+      await createPeerConnection(callerId, callerEmail, roomId, configuration, false);
+      const peerConnection = peerConnections[callerId].peerConnection;
       try {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
-        console.log(`Set remote description for ${callerId}`);
-        while (peerConnections[callerId].iceCandidates.length > 0) {
-          const candidate = peerConnections[callerId].iceCandidates.shift();
-          await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-          console.log(`Applied buffered ICE candidate for ${callerId}`);
-        }
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('answer', { sdp: answer, target: callerId, sender: socket.id });
+        console.log(`Sent answer to ${callerId}`);
       } catch (err) {
-        console.error(`Error handling answer from ${callerId}:`, err);
+        console.error(`Error handling offer from ${callerId}:`, err);
       }
-    }
-  });
+    });
 
-  socket.on('ice-candidate', async ({ candidate, callerId }) => {
-    console.log(`Received ICE candidate from ${callerId}`);
-    const peerConnection = peerConnections[callerId]?.peerConnection;
-    if (peerConnection) {
-      try {
-        if (candidate) {
-          if (peerConnection.remoteDescription) {
+    socket.on('answer', async ({ sdp, callerId }) => {
+      console.log(`Received answer from ${callerId}`);
+      const peerConnection = peerConnections[callerId]?.peerConnection;
+      if (peerConnection) {
+        try {
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+          console.log(`Set remote description for ${callerId}`);
+          while (peerConnections[callerId].iceCandidates.length > 0) {
+            const candidate = peerConnections[callerId].iceCandidates.shift();
             await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-            console.log(`Added ICE candidate from ${callerId}`);
-          } else {
-            peerConnections[callerId].iceCandidates.push(candidate);
-            console.log(`Buffered ICE candidate from ${callerId}`);
+            console.log(`Applied buffered ICE candidate for ${callerId}`);
           }
+        } catch (err) {
+          console.error(`Error handling answer from ${callerId}:`, err);
         }
-      } catch (err) {
-        console.error(`Error adding ICE candidate from ${callerId}:`, err);
       }
-    }
-  });
+    });
 
-  socket.on('user-disconnected', (id) => {
-    console.log(`User disconnected: ${id}`);
-    if (peerConnections[id]) {
-      peerConnections[id].peerConnection.close();
-      if (mainStreamId === id) {
-        mainStream = localStream;
-        mainStreamId = 'local';
-        document.getElementById('local-video').srcObject = localStream;
-        document.getElementById('local-video').play().catch(err => console.error('Main video play error:', err));
-        updateSelectedVideo('local');
+    socket.on('ice-candidate', async ({ candidate, callerId }) => {
+      console.log(`Received ICE candidate from ${callerId}`);
+      const peerConnection = peerConnections[callerId]?.peerConnection;
+      if (peerConnection) {
+        try {
+          if (candidate) {
+            if (peerConnection.remoteDescription) {
+              await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+              console.log(`Added ICE candidate from ${callerId}`);
+            } else {
+              peerConnections[callerId].iceCandidates.push(candidate);
+              console.log(`Buffered ICE candidate from ${callerId}`);
+            }
+          }
+        } catch (err) {
+          console.error(`Error adding ICE candidate from ${callerId}:`, err);
+        }
       }
-      document.getElementById(`container-${id}`)?.remove();
-      delete peerConnections[id];
-      updateChatTargetOptions();
-    }
-  });
+    });
 
-  socket.on('chat-message', ({ email, message }) => {
-    const chatContainer = document.getElementById('chat-container');
-    const chatPanel = document.getElementById('chat-panel');
-    const chatBadge = document.getElementById('chat-badge');
-    const messageElement = document.createElement('p');
-    messageElement.textContent = `${email}: ${message}`;
-    chatContainer.appendChild(messageElement);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    if (!chatPanel.classList.contains('active')) {
-      unreadMessages++;
-      chatBadge.textContent = unreadMessages;
-      chatBadge.classList.add('has-messages');
-    }
-    console.log(`Received chat message from ${email}: ${message}`);
-  });
+    socket.on('user-disconnected', (id) => {
+      console.log(`User disconnected: ${id}`);
+      if (peerConnections[id]) {
+        peerConnections[id].peerConnection.close();
+        if (mainStreamId === id) {
+          mainStream = localStream;
+          mainStreamId = 'local';
+          document.getElementById('local-video').srcObject = localStream;
+          document.getElementById('local-video').play().catch(err => console.error('Main video play error:', err));
+          updateSelectedVideo('local');
+        }
+        document.getElementById(`container-${id}`)?.remove();
+        delete peerConnections[id];
+        updateChatTargetOptions();
+      }
+    });
 
-  socket.on('emoji', ({ email, emoji }) => {
-    const emojiContainer = document.getElementById('emoji-container');
-    const emojiElement = document.createElement('div');
-    emojiElement.className = 'emoji';
-    emojiElement.textContent = emoji;
-    emojiElement.style.left = `${Math.random() * 80}%`;
-    emojiElement.style.top = `${Math.random() * 80}%`;
-    emojiContainer.appendChild(emojiElement);
-    setTimeout(() => emojiElement.remove(), 3000);
-    console.log(`Received emoji from ${email}: ${emoji}`);
-  });
+    socket.on('chat-message', ({ email, message }) => {
+      const chatContainer = document.getElementById('chat-container');
+      const chatPanel = document.getElementById('chat-panel');
+      const chatBadge = document.getElementById('chat-badge');
+      const messageElement = document.createElement('p');
+      messageElement.textContent = `${email}: ${message}`;
+      chatContainer.appendChild(messageElement);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      if (!chatPanel.classList.contains('active')) {
+        unreadMessages++;
+        chatBadge.textContent = unreadMessages;
+        chatBadge.classList.add('has-messages');
+      }
+      console.log(`Received chat message from ${email}: ${message}`);
+    });
 
-  socket.on('hand-raise', ({ email }) => {
-    const notification = document.createElement('div');
-    notification.className = 'notification';
-    notification.textContent = `${email} raised their hand`;
-    document.getElementById('notifications').appendChild(notification);
-    setTimeout(() => notification.remove(), 5000);
-    console.log(`Hand raised by ${email}`);
-  });
+    socket.on('emoji', ({ email, emoji }) => {
+      const emojiContainer = document.getElementById('emoji-container');
+      const emojiElement = document.createElement('div');
+      emojiElement.className = 'emoji';
+      emojiElement.textContent = emoji;
+      emojiElement.style.left = `${Math.random() * 80}%`;
+      emojiElement.style.top = `${Math.random() * 80}%`;
+      emojiContainer.appendChild(emojiElement);
+      setTimeout(() => emojiElement.remove(), 3000);
+      console.log(`Received emoji from ${email}: ${emoji}`);
+    });
+
+    socket.on('hand-raise', ({ email }) => {
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.textContent = `${email} raised their hand`;
+      document.getElementById('notifications').appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
+      console.log(`Hand raised by ${email}`);
+    });
+  } catch (err) {
+    console.error('Error fetching ICE servers:', err);
+    alert('Failed to initialize meeting. Please try again.');
+  }
 }
 
-async function createPeerConnection(id, email, roomId, initiateOffer) {
+function cleanupMeeting() {
+  // Close all peer connections
+  Object.values(peerConnections).forEach(({ peerConnection }) => {
+    peerConnection.close();
+  });
+  peerConnections = {};
+  // Stop local stream tracks
+  localStream?.getTracks().forEach(track => track.stop());
+  localStream = null;
+  mainStream = null;
+  mainStreamId = 'local';
+  // Clear participant UI
+  const participants = document.getElementById('participants');
+  participants.innerHTML = '';
+  console.log('Cleaned up meeting resources');
+}
+
+async function createPeerConnection(id, email, roomId, configuration, initiateOffer) {
   if (peerConnections[id]) {
     console.log(`Peer connection for ${id} already exists`);
     return;
@@ -205,6 +235,15 @@ async function createPeerConnection(id, email, roomId, initiateOffer) {
     if (peerConnection.iceConnectionState === 'failed') {
       peerConnection.restartIce();
       console.log(`Restarted ICE for ${id}`);
+    } else if (peerConnection.iceConnectionState === 'disconnected') {
+      console.log(`Peer ${id} disconnected, attempting to reconnect`);
+      setTimeout(() => {
+        if (peerConnection.iceConnectionState === 'disconnected') {
+          peerConnection.close();
+          delete peerConnections[id];
+          createPeerConnection(id, email, roomId, configuration, initiateOffer);
+        }
+      }, 5000);
     }
   };
 
@@ -425,13 +464,6 @@ function sendMessage() {
   const message = input.value.trim();
   if (message) {
     socket.emit('chat-message', { message, target });
-    if (target === 'group') {
-      const chatContainer = document.getElementById('chat-container');
-      const messageElement = document.createElement('p');
-      messageElement.textContent = `${socket.data?.email || 'You'}: ${message}`;
-      chatContainer.appendChild(messageElement);
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
     input.value = '';
     console.log(`Sent message to ${target}`);
   }
@@ -454,8 +486,7 @@ function toggleHandRaise() {
 }
 
 function hangup() {
-  localStream?.getTracks().forEach(track => track.stop());
-  Object.values(peerConnections).forEach(({ peerConnection }) => peerConnection.close());
+  cleanupMeeting();
   socket.disconnect();
   window.location.href = '/';
   console.log('Hung up');
@@ -477,6 +508,12 @@ function toggleControls() {
   const controls = document.getElementById('controls');
   controls.classList.toggle('active');
   console.log(`Controls ${controls.classList.contains('active') ? 'shown' : 'hidden'}`);
+}
+
+function toggleParticipants() {
+  const participants = document.getElementById('participants');
+  participants.classList.toggle('active');
+  console.log(`Participants ${participants.classList.contains('active') ? 'shown' : 'hidden'}`);
 }
 
 function toggleTheme() {
