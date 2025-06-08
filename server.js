@@ -1,25 +1,56 @@
+require('dotenv').config();
 const express = require('express');
-const http = require('http');
+const https = require('https');
 const { Server } = require('socket.io');
 const path = require('path');
 const ejs = require('ejs');
+const fs = require('fs');
+const axios = require('axios');
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const sslOptions = {
+  cert: fs.readFileSync(process.env.SSL_CERT_PATH),
+  key: fs.readFileSync(process.env.SSL_KEY_PATH)
+};
+const server = https.createServer(sslOptions, app);
+const io = new Server(server, { cors: { origin: 'https://sampledemo.shop' } });
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.render('index');
+});
+
+app.get('/join', (req, res) => {
+  res.render('join');
 });
 
 app.get('/join/:email/:code', (req, res) => {
   const { email, code } = req.params;
   res.render('meeting', { email, code });
+});
+
+app.get('/get-ice-servers', async (req, res) => {
+  try {
+    const response = await axios.put(
+      `https://global.xirsys.net/_turn/${process.env.XIRSYS_CHANNEL}`,
+      {},
+      {
+        auth: {
+          username: process.env.XIRSYS_USERNAME,
+          password: process.env.XIRSYS_SECRET
+        }
+      }
+    );
+    const iceServers = response.data.v.iceServers;
+    console.log('Fetched Xirsys ICE servers');
+    res.json({ iceServers });
+  } catch (err) {
+    console.error('Error fetching Xirsys ICE servers:', err.message);
+    res.status(500).json({ error: 'Failed to fetch ICE servers' });
+  }
 });
 
 io.on('connection', (socket) => {
@@ -32,6 +63,8 @@ io.on('connection', (socket) => {
       .map(id => ({ id, email: io.sockets.sockets.get(id).data.email }));
     socket.emit('existing-participants', participants);
     socket.to(roomId).emit('user-connected', { id: socket.id, email });
+    // Emit reload-meeting to all clients in the room, including the new joiner
+    io.in(roomId).emit('reload-meeting', { roomId });
   });
 
   socket.on('offer', ({ sdp, target, sender }) => {
@@ -48,8 +81,7 @@ io.on('connection', (socket) => {
 
   socket.on('chat-message', ({ message, target }) => {
     if (target === 'group') {
-      socket.to(socket.rooms.values().next().value).emit('chat-message', { email: socket.data.email, message });
-      socket.emit('chat-message', { email: socket.data.email, message });
+      io.in(socket.rooms.values().next().value).emit('chat-message', { email: socket.data.email, message });
     } else {
       socket.to(target).emit('chat-message', { email: socket.data.email, message });
       socket.emit('chat-message', { email: socket.data.email, message });
@@ -58,8 +90,7 @@ io.on('connection', (socket) => {
 
   socket.on('emoji', ({ emoji, target }) => {
     if (target === 'group') {
-      socket.to(socket.rooms.values().next().value).emit('emoji', { email: socket.data.email, emoji });
-      socket.emit('emoji', { email: socket.data.email, emoji });
+      io.in(socket.rooms.values().next().value).emit('emoji', { email: socket.data.email, emoji });
     } else {
       socket.to(target).emit('emoji', { email: socket.data.email, emoji });
       socket.emit('emoji', { email: socket.data.email, emoji });
@@ -74,9 +105,11 @@ io.on('connection', (socket) => {
     socket.rooms.forEach(room => {
       if (room !== socket.id) {
         socket.to(room).emit('user-disconnected', socket.id);
+        io.in(room).emit('reload-meeting', { roomId: room });
       }
     });
   });
 });
 
-server.listen(3000, () => console.log('Server running on port 3000'));
+const port = process.env.PORT || 3000;
+server.listen(port, () => console.log(`Server running on port ${port}`));
