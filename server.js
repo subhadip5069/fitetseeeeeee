@@ -1,19 +1,19 @@
 require('dotenv').config();
 const express = require('express');
-const https = require('https');
+const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const ejs = require('ejs');
-const fs = require('fs');
 const axios = require('axios');
 
 const app = express();
-const sslOptions = {
-  cert: fs.readFileSync(process.env.SSL_CERT_PATH),
-  key: fs.readFileSync(process.env.SSL_KEY_PATH)
-};
-const server = https.createServer(sslOptions, app);
-const io = new Server(server, { cors: { origin: 'https://sampledemo.shop' } });
+const server = http.createServer(app);
+const io = new Server(server, { 
+  cors: { 
+    origin: ['https://sampledemo.shop', 'http://localhost:3000'], 
+    methods: ['GET', 'POST']
+  } 
+});
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -45,7 +45,7 @@ app.get('/get-ice-servers', async (req, res) => {
       }
     );
     const iceServers = response.data.v.iceServers;
-    console.log('Fetched Xirsys ICE servers');
+    console.log('Fetched Xirsys ICE servers:', iceServers);
     res.json({ iceServers });
   } catch (err) {
     console.error('Error fetching Xirsys ICE servers:', err.message);
