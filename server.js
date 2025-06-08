@@ -63,7 +63,6 @@ io.on('connection', (socket) => {
       .map(id => ({ id, email: io.sockets.sockets.get(id).data.email }));
     socket.emit('existing-participants', participants);
     socket.to(roomId).emit('user-connected', { id: socket.id, email });
-    // Emit reload-meeting to all clients in the room, including the new joiner
     io.in(roomId).emit('reload-meeting', { roomId });
   });
 
