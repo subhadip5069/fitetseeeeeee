@@ -115,6 +115,7 @@ async function startMeeting(roomId, email) {
         mainStream = localStream;
         mainStreamId = 'local';
         document.getElementById('local-video').srcObject = localStream;
+        document.getElementById('local-video').play().catch(err => console.error('Main video play error:', err));
         updateSelectedVideo('local');
       }
       document.getElementById(`container-${id}`)?.remove();
@@ -134,17 +135,21 @@ async function startMeeting(roomId, email) {
     if (!chatPanel.classList.contains('active')) {
       unreadMessages++;
       chatBadge.textContent = unreadMessages;
-      chatBadge.parentElement.classList.add('has-messages');
+      chatBadge.classList.add('has-messages');
     }
+    console.log(`Received chat message from ${email}: ${message}`);
   });
 
   socket.on('emoji', ({ email, emoji }) => {
     const emojiContainer = document.getElementById('emoji-container');
     const emojiElement = document.createElement('div');
     emojiElement.className = 'emoji';
-    emojiElement.textContent = `${email}: ${emoji}`;
+    emojiElement.textContent = emoji;
+    emojiElement.style.left = `${Math.random() * 80}%`;
+    emojiElement.style.top = `${Math.random() * 80}%`;
     emojiContainer.appendChild(emojiElement);
     setTimeout(() => emojiElement.remove(), 3000);
+    console.log(`Received emoji from ${email}: ${emoji}`);
   });
 
   socket.on('hand-raise', ({ email }) => {
@@ -153,6 +158,7 @@ async function startMeeting(roomId, email) {
     notification.textContent = `${email} raised their hand`;
     document.getElementById('notifications').appendChild(notification);
     setTimeout(() => notification.remove(), 5000);
+    console.log(`Hand raised by ${email}`);
   });
 }
 
@@ -182,6 +188,7 @@ async function createPeerConnection(id, email, roomId, initiateOffer) {
       if (remoteVideo) {
         remoteVideo.srcObject = peerConnections[id].stream;
         remoteVideo.play().catch(err => console.error(`Error playing video for ${id}:`, err));
+        console.log(`Assigned and playing stream for ${id}`);
       }
     }
   };
@@ -229,6 +236,10 @@ function addParticipant(id, email, stream) {
     video.muted = id === 'local';
     video.srcObject = stream;
     videoContainer.appendChild(video);
+    const initials = document.createElement('div');
+    initials.className = 'initials';
+    initials.textContent = email.slice(0, 2).toUpperCase();
+    videoContainer.appendChild(initials);
     const nameLabel = document.createElement('p');
     nameLabel.textContent = email;
     videoContainer.appendChild(nameLabel);
@@ -319,6 +330,7 @@ async function shareScreen() {
     if (mainStreamId === 'local') {
       mainStream = screenStream;
       document.getElementById('local-video').srcObject = screenStream;
+      document.getElementById('local-video').play().catch(err => console.error('Screen share play error:', err));
     }
     screenTrack.onended = () => {
       Object.values(peerConnections).forEach(({ peerConnection }) => {
@@ -328,6 +340,7 @@ async function shareScreen() {
       if (mainStreamId === 'local') {
         mainStream = localStream;
         document.getElementById('local-video').srcObject = localStream;
+        document.getElementById('local-video').play().catch(err => console.error('Main video play error:', err));
       }
     };
     console.log('Started screen sharing');
@@ -343,24 +356,42 @@ function toggleRecording() {
     canvas.width = 1280;
     canvas.height = 720;
     const streams = [mainStream, ...Object.values(peerConnections).map(p => p.stream)].filter(s => s);
-    let xOffset = 0;
     const videos = streams.map(stream => {
       const video = document.createElement('video');
       video.srcObject = stream;
       video.autoplay = true;
       return video;
     });
+
     function draw() {
-      xOffset = 0;
-      videos.forEach(video => {
-        ctx.drawImage(video, xOffset, 0, canvas.width / videos.length, canvas.height);
-        xOffset += canvas.width / videos.length;
+      const cols = Math.ceil(Math.sqrt(videos.length));
+      const rows = Math.ceil(videos.length / cols);
+      const videoWidth = canvas.width / cols;
+      const videoHeight = canvas.height / rows;
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      videos.forEach((video, index) => {
+        const x = (index % cols) * videoWidth;
+        const y = Math.floor(index / cols) * videoHeight;
+        ctx.drawImage(video, x, y, videoWidth, videoHeight);
       });
+
+      ctx.font = '30px Arial';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillText('Fitetse-Meet', 20, 40);
+
       requestAnimationFrame(draw);
     }
+
     videos.forEach(video => {
-      video.onloadedmetadata = () => draw();
+      video.onloadedmetadata = () => {
+        video.play().catch(err => console.error('Video play error in recording:', err));
+        draw();
+      };
     });
+
     const canvasStream = canvas.captureStream();
     mediaRecorder = new MediaRecorder(canvasStream);
     mediaRecorder.ondataavailable = (event) => {
@@ -394,6 +425,13 @@ function sendMessage() {
   const message = input.value.trim();
   if (message) {
     socket.emit('chat-message', { message, target });
+    if (target === 'group') {
+      const chatContainer = document.getElementById('chat-container');
+      const messageElement = document.createElement('p');
+      messageElement.textContent = `${socket.data?.email || 'You'}: ${message}`;
+      chatContainer.appendChild(messageElement);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
     input.value = '';
     console.log(`Sent message to ${target}`);
   }
@@ -430,7 +468,7 @@ function toggleChat() {
   if (chatPanel.classList.contains('active')) {
     unreadMessages = 0;
     chatBadge.textContent = '0';
-    chatBadge.parentElement.classList.remove('has-messages');
+    chatBadge.classList.remove('has-messages');
   }
   console.log(`Chat panel ${chatPanel.classList.contains('active') ? 'opened' : 'closed'}`);
 }
