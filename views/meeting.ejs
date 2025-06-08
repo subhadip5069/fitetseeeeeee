@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Fitetse-Meet</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
@@ -18,6 +18,7 @@
   <div class="emoji-container" id="emoji-container"></div>
   <div class="notifications" id="notifications"></div>
   <div class="chat-panel" id="chat-panel">
+    <button class="chat-close" onclick="toggleChat()" title="Close Chat"><i class="fas fa-times"></i></button>
     <div class="chat-badge" id="chat-badge">0</div>
     <div class="chat-container" id="chat-container"></div>
     <div class="chat-input">
@@ -42,7 +43,7 @@
     <button id="hand-btn" onclick="toggleHandRaise()" title="Raise Hand"><i class="fas fa-hand-paper"></i></button>
     <button onclick="toggleChat()" title="Chat"><i class="fas fa-comment"></i></button>
     <button onclick="toggleTheme()" title="Toggle Theme"><i class="fas fa-moon"></i></button>
-    <button onclick="hangup()" style="background: #e74c3c;" title="Hang Up"><i class="fas fa-phone-slash"></i></button>
+    <button onclick="hangup()" class="hangup-btn" title="Hang Up"><i class="fas fa-phone-slash"></i></button>
   </div>
   <button class="controls-toggle" onclick="toggleControls()" title="Show/Hide Controls"><i class="fas fa-ellipsis-h"></i></button>
   <button class="participants-toggle" onclick="toggleParticipants()" title="Show/Hide Participants"><i class="fas fa-users"></i></button>
